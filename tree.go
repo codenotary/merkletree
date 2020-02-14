@@ -156,9 +156,9 @@ func InclusionProof(store Storer, at, i uint64) (p Path) {
 	m := i
 	n := at + 1
 
-	offset := uint64(0)
-	l := uint64(0)
-	r := uint64(0)
+	var offset uint64
+	var l uint64
+	var r uint64
 	for {
 		d := (bits.Len64(n - 1))
 		k := uint64(1) << (d - 1)
@@ -230,9 +230,9 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 	}
 
 	b := true
-	offset := uint64(0)
-	l := uint64(0)
-	r := uint64(0)
+	var offset uint64
+	var l uint64
+	var r uint64
 	for {
 		d := (bits.Len64(n - 1))
 		k := uint64(1) << (d - 1)
