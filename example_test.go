@@ -49,22 +49,22 @@ func make7leaves() (m map[string][sha256.Size]byte, D [][]byte, s Storer) {
 		Append(s, []byte(v))
 	}
 
-	m["a"] = *s.Get(0, 0)
-	m["b"] = *s.Get(0, 1)
-	m["c"] = *s.Get(0, 2)
-	m["d"] = *s.Get(0, 3)
-	m["e"] = *s.Get(0, 4)
-	m["f"] = *s.Get(0, 5)
+	m["a"] = *s.Get(0, 0, 0)
+	m["b"] = *s.Get(0, 1, 0)
+	m["c"] = *s.Get(0, 2, 0)
+	m["d"] = *s.Get(0, 3, 0)
+	m["e"] = *s.Get(0, 4, 0)
+	m["f"] = *s.Get(0, 5, 0)
 
-	m["g"] = *s.Get(1, 0)
-	m["h"] = *s.Get(1, 1)
-	m["i"] = *s.Get(1, 2)
-	m["j"] = *s.Get(0, 6)
+	m["g"] = *s.Get(1, 0, 0)
+	m["h"] = *s.Get(1, 1, 0)
+	m["i"] = *s.Get(1, 2, 0)
+	m["j"] = *s.Get(0, 6, 0)
 
-	m["k"] = *s.Get(2, 0)
-	m["l"] = *s.Get(2, 1)
+	m["k"] = *s.Get(2, 0, 1)
+	m["l"] = *s.Get(2, 1, 0)
 
-	m["hash"] = *s.Get(3, 0)
+	m["hash"] = *s.Get(3, 0, 2)
 
 	return
 }

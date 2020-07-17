@@ -33,20 +33,20 @@ type Storer interface {
 	// Width returns the number of leaves present in the tree.
 	Width() uint64
 	// Set assigns _value_ to the node referenced by _layer_ and _index_.
-	Set(layer uint8, index uint64, value [sha256.Size]byte)
-	// Get returns value of the node referenced by _layer_ and _index_.
-	Get(layer uint8, index uint64) *[sha256.Size]byte
+	Set(layer uint8, index uint64, dimension uint64, value [sha256.Size]byte)
+	// Get returns value of the node referenced by _layer_ and _index_ and _dimension_.
+	Get(layer uint8, index uint64, dimension uint64) *[sha256.Size]byte
 }
 
 type memStore struct {
-	data [][][sha256.Size]byte
+	data [][][][sha256.Size]byte
 }
 
 // NewMemStore returns an in-memory implementation for the _Storer_ interface,
 // mainly intended for testing purpose.
 func NewMemStore() Storer {
 	return &memStore{
-		data: make([][][sha256.Size]byte, 1),
+		data: make([][][][sha256.Size]byte, 1),
 	}
 }
 
@@ -54,24 +54,24 @@ func (m *memStore) Width() uint64 {
 	return uint64(len(m.data[0]))
 }
 
-func (m *memStore) Set(layer uint8, index uint64, value [sha256.Size]byte) {
-
+func (m *memStore) Set(layer uint8, index uint64, dimension uint64, value [sha256.Size]byte) {
 	for uint8(len(m.data)) <= layer {
-		m.data = append(m.data, make([][sha256.Size]byte, 0, 256*256))
+		m.data = append(m.data, make([][][sha256.Size]byte, 0, 256*256))
 	}
 
 	if uint64(len(m.data[layer])) == index {
-		m.data[layer] = append(m.data[layer], value)
+		m.data[layer] = append(m.data[layer], [][sha256.Size]byte{value})
 	} else {
-		m.data[layer][index] = value
+		m.data[layer][index] = append(m.data[layer][index], value)
 	}
 }
 
-func (m *memStore) Get(layer uint8, index uint64) *[sha256.Size]byte {
-	if int(layer) >= len(m.data) || index >= uint64(len(m.data[layer])) {
+func (m *memStore) Get(layer uint8, index uint64, dimension uint64) *[sha256.Size]byte {
+	if int(layer) >= len(m.data) || index >= uint64(len(m.data[layer])) || dimension >= uint64(len(m.data[layer][index])) {
 		return nil
 	}
-	return &m.data[layer][index]
+
+	return &m.data[layer][index][dimension]
 }
 
 func (m *memStore) Print() {

@@ -43,6 +43,31 @@ var testFrozen = []struct {
 	{6, 0, 0, true}, {6, 0, 1, true}, {6, 0, 2, true}, {6, 0, 3, true}, {6, 0, 4, true}, {6, 0, 5, true}, {6, 0, 6, true}, {6, 0, 7, false},
 }
 
+func TestCalcDimension(t *testing.T) {
+	// some hardcoded values //TODO: needs better writing
+	assert.True(t, highestDimension(0) == 0)
+	assert.True(t, highestDimension(1) == 0)
+	assert.True(t, highestDimension(2) == 1)
+	assert.True(t, highestDimension(3) == 3)
+	assert.True(t, highestDimension(4) == 7)
+
+	assert.True(t, calcDimension(1, 5) == 0)
+	assert.True(t, calcDimension(1, 7) == 0)
+
+	assert.True(t, calcDimension(2, 2) == 0)
+	assert.True(t, calcDimension(2, 3) == 1)
+
+	assert.True(t, calcDimension(2, 6) == 0)
+	assert.True(t, calcDimension(2, 7) == 1)
+
+	assert.True(t, calcDimension(3, 4) == 0)
+	assert.True(t, calcDimension(3, 5) == 1)
+
+	assert.True(t, calcDimension(4, 8) == 0)
+	assert.True(t, calcDimension(4, 9) == 1)
+	assert.True(t, calcDimension(4, 10) == 2)
+}
+
 func TestAppend(t *testing.T) {
 	s := NewMemStore()
 	assert.Equal(t, -1, Depth(s))
@@ -52,6 +77,7 @@ func TestAppend(t *testing.T) {
 		Append(s, b)
 
 		assert.Equal(t, index, uint64(s.Width()-1))
+
 		d := int(math.Ceil(math.Log2(float64(index + 1))))
 		assert.Equal(t, d, Depth(s))
 
@@ -135,7 +161,7 @@ func TestVerifyInclusion(t *testing.T) {
 		for at := uint64(0); at <= index; at++ {
 			for i := uint64(0); i <= at; i++ {
 				path := MPath(i, D[0:at+1])
-				isV := Path(path).VerifyInclusion(at, i, testRoots[at], *s.Get(0, i))
+				isV := Path(path).VerifyInclusion(at, i, testRoots[at], *s.Get(0, i, 0))
 				assert.True(t, isV)
 				if !isV {
 					return

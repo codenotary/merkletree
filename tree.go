@@ -39,7 +39,10 @@ func Depth(store Storer) int {
 
 // Root returns the root hash of the tree. Panic if store is empty.
 func Root(store Storer) [sha256.Size]byte {
-	h := store.Get(uint8(Depth(store)), 0)
+	d := uint8(Depth(store))
+
+	h := store.Get(d, 0, calcDimension(d, store.Width()-1))
+
 	if h == nil {
 		return sha256.Sum256(nil)
 	}
@@ -62,24 +65,28 @@ func Append(store Storer, b []byte) {
 // then incrementally builds the intermediate nodes up to the root.
 // AppendHash re-uses _h_ internally, as side-effect the new root will be set to _h_.
 func AppendHash(store Storer, h *[sha256.Size]byte) {
-
 	// append the leaf
 	l := store.Width()
-	store.Set(0, l, *h)
+	store.Set(0, l, 0, *h)
 	l++
 
 	// build up to the root
 	d := uint8(0)
 	c := [sha256.Size*2 + 1]byte{NodePrefix}
+
+	dim := uint64(0)
+
 	for l > 1 {
 		if l%2 == 0 {
-			copy(c[1:sha256.Size+1], store.Get(d, l-2)[:])
+			copy(c[1:sha256.Size+1], store.Get(d, l-2, highestDimension(d))[:])
 			copy(c[sha256.Size+1:], h[:])
 			(*h) = sha256.Sum256(c[:])
 
 			d++
 			l >>= 1
-			store.Set(d, l-1, *h)
+			store.Set(d, l-1, dim, *h)
+
+			dim |= 1 << (d - 1)
 		} else {
 			l++
 			d++
@@ -87,6 +94,37 @@ func AppendHash(store Storer, h *[sha256.Size]byte) {
 		}
 	}
 
+}
+
+func highestDimension(layer uint8) uint64 {
+	if layer > 1 {
+		//Minimal dimension at which (layer is fixed)
+		return (1 << (layer - 1)) - 1
+	}
+	return 0
+}
+
+func calcDimension(layer uint8, at uint64) uint64 {
+	dim := uint64(0)
+	l := at + 1
+	d := uint8(0)
+
+	for l > 1 {
+		if l%2 == 0 {
+			d++
+			l >>= 1
+
+			if d < layer {
+				dim |= 1 << (d - 1)
+			}
+		} else {
+			l++
+			d++
+			l >>= 1
+		}
+	}
+
+	return dim
 }
 
 // IsFrozen returns true when the node (_layer_, _index_) in a tree of width = (_at_ + 1) is frozen, otherwise false.
@@ -122,7 +160,7 @@ func (p *Path) FromSlice(slice [][]byte) {
 func mth(store Storer, l, r uint64) *[sha256.Size]byte {
 	n := r - l
 	if n == 0 {
-		return store.Get(0, r)
+		return store.Get(0, r, 0)
 	}
 
 	k := uint64(1) << (bits.Len64(n) - 1)
@@ -135,7 +173,6 @@ func mth(store Storer, l, r uint64) *[sha256.Size]byte {
 }
 
 func mthPosition(l, r uint64) (layer uint8, index uint64) {
-
 	d := (bits.Len64(r - l))
 	k := uint64(1) << d
 
@@ -147,7 +184,6 @@ func mthPosition(l, r uint64) (layer uint8, index uint64) {
 // InclusionProof returns the shortest list of additional nodes required to compute the root (i.e., MTH) from the (_i_+1)th leaf,
 // assuming the (sub-)tree constructed up to the (_at_+1)th leaf stored into a given _store_.
 func InclusionProof(store Storer, at, i uint64) (p Path) {
-
 	w := store.Width()
 	if i > at || at >= w || at < 1 {
 		return
@@ -173,12 +209,16 @@ func InclusionProof(store Storer, at, i uint64) (p Path) {
 		}
 
 		layer, index := mthPosition(l, r)
-		// fmt.Printf("%d) [%d,%d] -> (%d, %d)\n", len(p), l, r, layer, index)
+
+		var dimension uint64 = 0
+
 		if IsFrozen(layer, index, at) {
-			p = append(Path{*store.Get(layer, index)}, p...)
+			dimension = highestDimension(layer)
 		} else {
-			p = append(Path{*mth(store, l, r)}, p...)
+			dimension = calcDimension(layer, at)
 		}
+
+		p = append(Path{*store.Get(layer, index, dimension)}, p...)
 
 		if n < 1 || (n == 1 && m == 0) {
 			return
@@ -248,15 +288,28 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 		}
 
 		layer, index := mthPosition(l, r)
+		var dimension uint64 = 0
+
 		if IsFrozen(layer, index, at) {
-			p = append(Path{*store.Get(layer, index)}, p...)
+			dimension = highestDimension(layer)
 		} else {
-			p = append(Path{*mth(store, l, r)}, p...)
+			dimension = calcDimension(layer, at)
 		}
+
+		p = append(Path{*store.Get(layer, index, dimension)}, p...)
 
 		if m == n {
 			if !b {
-				p = append(Path{*mth(store, offset, offset+n-1)}, p...)
+				layer1, index1 := mthPosition(offset, offset+n-1)
+				var dimension1 uint64 = 0
+
+				if IsFrozen(layer1, index1, at) {
+					dimension1 = highestDimension(layer1)
+				} else {
+					dimension1 = calcDimension(layer1, at)
+				}
+
+				p = append(Path{*store.Get(layer1, index1, dimension1)}, p...)
 			}
 			return
 		}
