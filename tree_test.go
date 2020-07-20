@@ -319,6 +319,8 @@ func BenchmarkInclusionProof(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		InclusionProof(s, uint64(i), uint64(i))
+		for at := 0; at < i; at++ {
+			InclusionProof(s, uint64(at), uint64(i))
+		}
 	}
 }
