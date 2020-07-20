@@ -44,28 +44,51 @@ var testFrozen = []struct {
 }
 
 func TestCalcDimension(t *testing.T) {
-	// some hardcoded values //TODO: needs better writing
-	assert.True(t, highestDimension(0) == 0)
-	assert.True(t, highestDimension(1) == 0)
-	assert.True(t, highestDimension(2) == 1)
-	assert.True(t, highestDimension(3) == 3)
-	assert.True(t, highestDimension(4) == 7)
+	var testCases = []struct {
+		layer    uint8
+		at       uint64
+		expected uint64
+	}{
+		{0, 0, 0},
+		{1, 1, 0},
+		{1, 2, 0},
+		{1, 3, 0},
+		{1, 4, 0},
+		{1, 5, 0},
+		{1, 6, 0},
+		{1, 7, 0},
+		{1, 8, 0},
+		{2, 2, 0},
+		{2, 3, 1},
+		{2, 6, 0},
+		{2, 7, 1},
+		{3, 4, 0},
+		{3, 5, 1},
+		{4, 8, 0},
+		{4, 9, 1},
+		{4, 10, 2},
+	}
 
-	assert.True(t, calcDimension(1, 5) == 0)
-	assert.True(t, calcDimension(1, 7) == 0)
+	for _, v := range testCases {
+		assert.Equal(t, v.expected, calcDimension(v.layer, v.at))
+	}
+}
 
-	assert.True(t, calcDimension(2, 2) == 0)
-	assert.True(t, calcDimension(2, 3) == 1)
+func TestHighestDimension(t *testing.T) {
+	var testCases = []struct {
+		layer    uint8
+		expected uint64
+	}{
+		{0, 0},
+		{1, 0},
+		{2, 1},
+		{3, 3},
+		{4, 7},
+	}
 
-	assert.True(t, calcDimension(2, 6) == 0)
-	assert.True(t, calcDimension(2, 7) == 1)
-
-	assert.True(t, calcDimension(3, 4) == 0)
-	assert.True(t, calcDimension(3, 5) == 1)
-
-	assert.True(t, calcDimension(4, 8) == 0)
-	assert.True(t, calcDimension(4, 9) == 1)
-	assert.True(t, calcDimension(4, 10) == 2)
+	for _, v := range testCases {
+		assert.Equal(t, v.expected, highestDimension(v.layer))
+	}
 }
 
 func TestAppend(t *testing.T) {
