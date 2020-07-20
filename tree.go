@@ -251,7 +251,7 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 
 		layer, index := mthPosition(l, r)
 
-		if r == w-1 || IsFrozen(layer, index, at) {
+		if at == w-1 || IsFrozen(layer, index, at) {
 			p = append(Path{*store.Get(layer, index)}, p...)
 		} else {
 			p = append(Path{*mth(store, l, r)}, p...)
