@@ -174,7 +174,7 @@ func InclusionProof(store Storer, at, i uint64) (p Path) {
 
 		layer, index := mthPosition(l, r)
 		// fmt.Printf("%d) [%d,%d] -> (%d, %d)\n", len(p), l, r, layer, index)
-		if IsFrozen(layer, index, at) {
+		if at == w-1 || IsFrozen(layer, index, at) {
 			p = append(Path{*store.Get(layer, index)}, p...)
 		} else {
 			p = append(Path{*mth(store, l, r)}, p...)
@@ -225,7 +225,9 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 		return
 	}
 
-	if w := store.Width(); n > w {
+	w := store.Width()
+
+	if n > w {
 		return
 	}
 
@@ -248,7 +250,8 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 		}
 
 		layer, index := mthPosition(l, r)
-		if IsFrozen(layer, index, at) {
+
+		if at == w-1 || IsFrozen(layer, index, at) {
 			p = append(Path{*store.Get(layer, index)}, p...)
 		} else {
 			p = append(Path{*mth(store, l, r)}, p...)
@@ -256,7 +259,12 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 
 		if m == n {
 			if !b {
-				p = append(Path{*mth(store, offset, offset+n-1)}, p...)
+				if at == w-1 {
+					layerR, indexR := mthPosition(offset, offset+n-1)
+					p = append(Path{*store.Get(layerR, indexR)}, p...)
+				} else {
+					p = append(Path{*mth(store, offset, offset+n-1)}, p...)
+				}
 			}
 			return
 		}
