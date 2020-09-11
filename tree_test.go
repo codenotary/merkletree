@@ -288,7 +288,18 @@ func BenchmarkAppendHash(b *testing.B) {
 
 func BenchmarkInclusionProof(b *testing.B) {
 	s := NewMemStore()
+	for i := 0; i <= b.N; i++ {
+		Append(s, []byte{0, 1, 3, 4, 5, 6, 7})
+	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		InclusionProof(s, uint64(i), uint64(i/2))
+	}
+}
+
+func BenchmarkInclusionProofOfLastNode(b *testing.B) {
+	s := NewMemStore()
+	for i := 0; i <= b.N; i++ {
 		Append(s, []byte{0, 1, 3, 4, 5, 6, 7})
 	}
 	b.ResetTimer()
