@@ -119,33 +119,38 @@ func (p *Path) FromSlice(slice [][]byte) {
 	*p = Path(pp)
 }
 
-func mth(store Storer, l, r uint64) *[sha256.Size]byte {
-	n := r - l
-	if n == 0 {
+// mthAt returns the MTH of the sub-tree (selected by the _l_eft and _r_ight indexes) of the tree
+// stored into a given _store_, assuming that the tree is constructed up to the (_at_+1)th leaf.
+// Hashing is re-computed only for those nodes that are not in the assumed state.
+func mthAt(store Storer, l, r, at uint64) *[sha256.Size]byte {
+
+	// a leaf hash never changes
+	if r == l {
 		return store.Get(0, r)
 	}
 
-	k := uint64(1) << (bits.Len64(n) - 1)
+	layer := uint8(bits.Len64(r - l)) // max height of the sub-tree
+	a := uint64(1) << layer           // max width of the sub-tree
 
+	// when the node is already frozen at the assumed state
+	// or the whole store exactly matches the assumed state,
+	// return the hash
+	if at >= l+a-1 || at == store.Width()-1 {
+		return store.Get(layer, l/a)
+	}
+
+	// otherwise, re-compute the hash...
+
+	k := a / 2 // the largest power of two smaller than n (i.e., n = r-l, k < n <= 2k)
 	c := [sha256.Size*2 + 1]byte{NodePrefix}
-	copy(c[1:sha256.Size+1], mth(store, l, l+k-1)[:]) //MTH(D[0:k])
-	copy(c[sha256.Size+1:], mth(store, l+k, r)[:])    //MTH(D[k:n])
+	copy(c[1:sha256.Size+1], mthAt(store, l, l+k-1, at)[:])
+	copy(c[sha256.Size+1:], mthAt(store, l+k, r, at)[:])
 	h := sha256.Sum256(c[:])
 	return &h
 }
 
-func mthPosition(l, r uint64) (layer uint8, index uint64) {
-
-	d := (bits.Len64(r - l))
-	k := uint64(1) << d
-
-	index = l / k
-	layer = uint8(d)
-	return
-}
-
 // InclusionProof returns the shortest list of additional nodes required to compute the root (i.e., MTH) from the (_i_+1)th leaf,
-// assuming the (sub-)tree constructed up to the (_at_+1)th leaf stored into a given _store_.
+// assuming the (sub-)tree constructed up to the (_at_+1)th leaf and stored into a given _store_.
 func InclusionProof(store Storer, at, i uint64) (p Path) {
 
 	w := store.Width()
@@ -172,13 +177,7 @@ func InclusionProof(store Storer, at, i uint64) (p Path) {
 			offset += k
 		}
 
-		layer, index := mthPosition(l, r)
-		// fmt.Printf("%d) [%d,%d] -> (%d, %d)\n", len(p), l, r, layer, index)
-		if at == w-1 || IsFrozen(layer, index, at) {
-			p = append(Path{*store.Get(layer, index)}, p...)
-		} else {
-			p = append(Path{*mth(store, l, r)}, p...)
-		}
+		p = append(Path{*mthAt(store, l, r, at)}, p...)
 
 		if n < 1 || (n == 1 && m == 0) {
 			return
@@ -249,22 +248,11 @@ func ConsistencyProof(store Storer, at, i uint64) (p Path) {
 			b = false
 		}
 
-		layer, index := mthPosition(l, r)
-
-		if at == w-1 || IsFrozen(layer, index, at) {
-			p = append(Path{*store.Get(layer, index)}, p...)
-		} else {
-			p = append(Path{*mth(store, l, r)}, p...)
-		}
+		p = append(Path{*mthAt(store, l, r, at)}, p...)
 
 		if m == n {
 			if !b {
-				if at == w-1 {
-					layerR, indexR := mthPosition(offset, offset+n-1)
-					p = append(Path{*store.Get(layerR, indexR)}, p...)
-				} else {
-					p = append(Path{*mth(store, offset, offset+n-1)}, p...)
-				}
+				p = append(Path{*mthAt(store, offset, offset+n-1, at)}, p...)
 			}
 			return
 		}
